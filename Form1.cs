@@ -7,6 +7,11 @@ namespace CprWavExtractor
 {
     public partial class Form1 : Form
     {
+        // Fixed params
+        private const int CH = 2, SR = 48000, BPS = 16, SEC = 5;
+        private const int FRAME_BYTES = CH * (BPS / 8);          // 4
+        private const int DATA_LEN = SR * SEC * FRAME_BYTES;     // 960,000
+
         public Form1()
         {
             InitializeComponent();
@@ -39,21 +44,7 @@ namespace CprWavExtractor
                 if (!File.Exists(inPath)) throw new FileNotFoundException("Input not found.", inPath);
                 if (string.IsNullOrWhiteSpace(outPath)) throw new InvalidOperationException("Output path missing.");
 
-                const int ch = 2, sr = 48000, bps = 16, seconds = 5;
-                int frameBytes = ch * (bps / 8);                 // 4
-                int dataLen = sr * seconds * frameBytes;         // 960,000
-
-                byte[] blob = File.ReadAllBytes(inPath);
-                if (blob.Length < dataLen) throw new InvalidOperationException("File too small.");
-
-                long start = blob.LongLength - dataLen;          // carve last 5s
-                var pcmLE = new byte[dataLen];
-                Buffer.BlockCopy(blob, (int)start, pcmLE, 0, dataLen);
-
-                string outFile = Path.ChangeExtension(outPath, ".wav");
-                WriteRiffWav(outFile, ch, sr, bps, pcmLE);
-
-                txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] OK: wrote {outFile} (data={dataLen} bytes)\r\n");
+                ExtractWithAutoOffset(inPath, outPath);
                 lblStatus.Text = "Done";
             }
             catch (Exception ex)
@@ -62,9 +53,6 @@ namespace CprWavExtractor
                 lblStatus.Text = "Error";
             }
         }
-
-
-
 
         private void SuggestOutputPath()
         {
@@ -75,64 +63,69 @@ namespace CprWavExtractor
             txtOutput.Text = Path.Combine(dir, baseName + "_preview.wav");
         }
 
-        // ---- Helpers ----
-        private static void SwapEndianPerSampleInPlace(byte[] buf, int sampleBytes)
+        // --- Core ---
+        private void ExtractWithAutoOffset(string inPath, string outPath)
         {
-            // sampleBytes = 2 for 16-bit
-            for (int i = 0; i + sampleBytes <= buf.Length; i += sampleBytes)
-            {
-                byte t = buf[i];
-                buf[i] = buf[i + 1];
-                buf[i + 1] = t;
-            }
+            byte[] blob = File.ReadAllBytes(inPath);
+            if (blob.LongLength < DATA_LEN) throw new InvalidOperationException("File too small.");
+
+            int pad = FindBestOffset(blob, DATA_LEN, 4096); // scan last 4 KB, 4-byte steps
+            long start = blob.LongLength - DATA_LEN - pad;
+
+            var pcmLE = new byte[DATA_LEN];
+            Buffer.BlockCopy(blob, (int)start, pcmLE, 0, DATA_LEN); // bytes already LE per your findings
+
+            string outFile = Path.ChangeExtension(outPath, ".wav");
+            WriteRiffWav(outFile, CH, SR, BPS, pcmLE);
+
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] pad={pad}, start={start}, wrote {outFile} (data={DATA_LEN})\r\n");
         }
 
-        private void ExtractTailSweep(string inPath, string outPathBase)
+        // Score a PCM window: prefer non-silent, low DC, decent RMS
+        private static double ScoreWindow(byte[] buf, int start, int len)
         {
-            const int ch = 2, sr = 48000, bps = 16, seconds = 5;
-            int bytesPerSample = bps / 8;              // 2
-            int frameBytes = ch * bytesPerSample;      // 4
-            int dataLen = sr * seconds * frameBytes;   // 960,000
+            int n = Math.Min(len, 16384);
+            if (n <= 0) return double.NegativeInfinity;
 
-            byte[] blob = File.ReadAllBytes(inPath);
-            if (blob.LongLength < dataLen) throw new InvalidOperationException("File too small.");
+            long sum = 0, sumSq = 0;
+            int zeros = 0;
 
-            // Create output folder
-            string baseDir = Path.GetDirectoryName(outPathBase) ?? ".";
-            string stem = Path.GetFileNameWithoutExtension(outPathBase);
-            string outDir = Path.Combine(baseDir, stem + "_candidates");
-            Directory.CreateDirectory(outDir);
+            for (int i = start; i + 1 < start + n; i += 2)
+            {
+                short s = (short)(buf[i] | (buf[i + 1] << 8));
+                if (s == 0) zeros++;
+                int v = s;
+                sum += v;
+                sumSq += (long)v * v;
+            }
 
-            // Try paddings 0..2048 stepping 64 bytes
-            for (int pad = 0; pad <= 2048; pad += 64)
+            int samples = n / 2;
+            double mean = sum / (double)samples;
+            double rms = Math.Sqrt(sumSq / (double)samples);
+            double dc = Math.Abs(mean);
+            double zeroFrac = zeros / (double)samples;
+
+            return rms - 4.0 * dc - 1000.0 * zeroFrac;
+        }
+
+        private static int FindBestOffset(byte[] blob, int dataLen, int maxPad)
+        {
+            double best = double.NegativeInfinity;
+            int bestPad = 0;
+
+            for (int pad = 0; pad <= maxPad; pad += 4) // align to 4
             {
                 long start = blob.LongLength - dataLen - pad;
                 if (start < 0) break;
-
-                // 1) Big-endian→Little-endian (expected)
-                byte[] pcmLE = new byte[dataLen];
-                Buffer.BlockCopy(blob, (int)start, pcmLE, 0, dataLen);
-                // swap 16-bit samples only (do not touch headers; this is raw PCM window)
-                for (int i = 0; i + 1 < pcmLE.Length; i += 2)
-                { byte t = pcmLE[i]; pcmLE[i] = pcmLE[i + 1]; pcmLE[i + 1] = t; }
-
-                string fLE = Path.Combine(outDir, $"{stem}_off{pad}_LE.wav");
-                WriteRiffWav(fLE, ch, sr, bps, pcmLE);
-
-                // 2) No swap (in case window already LE)
-                byte[] pcmRaw = new byte[dataLen];
-                Buffer.BlockCopy(blob, (int)start, pcmRaw, 0, dataLen);
-                string fRaw = Path.Combine(outDir, $"{stem}_off{pad}_RAW.wav");
-                WriteRiffWav(fRaw, ch, sr, bps, pcmRaw);
-
-                txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] start={start} pad={pad} → {fLE} and {fRaw}\r\n");
+                double sc = ScoreWindow(blob, (int)start, dataLen);
+                if (sc > best) { best = sc; bestPad = pad; }
             }
-
-            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] Wrote candidates in {outDir}\r\n");
+            return bestPad;
         }
 
         private static void WriteRiffWav(string path, int channels, int sampleRate, int bitsPerSample, byte[] data)
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
             using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             using (var bw = new BinaryWriter(fs, Encoding.ASCII))
             {
@@ -157,42 +150,7 @@ namespace CprWavExtractor
             }
         }
 
-        private void ExtractTailWithOffsets(string inPath, string outPathBase)
-        {
-            const int ch = 2, sr = 48000, bps = 16, seconds = 5;
-            int bytesPerSample = bps / 8;              // 2
-            int frameBytes = ch * bytesPerSample;      // 4
-            int dataLen = sr * seconds * frameBytes;   // 960,000
-
-            byte[] blob = File.ReadAllBytes(inPath);
-            int[] offsets = { 0, 512, 1024 };
-
-            foreach (int pad in offsets)
-            {
-                long start = blob.LongLength - dataLen - pad;
-                if (start < 0) continue;
-
-                var pcm = new byte[dataLen];
-                Buffer.BlockCopy(blob, (int)start, pcm, 0, dataLen);
-
-                // BE → LE on PCM only
-                for (int i = 0; i + 1 < pcm.Length; i += 2)
-                {
-                    byte t = pcm[i]; pcm[i] = pcm[i + 1]; pcm[i + 1] = t;
-                }
-
-                string path = Path.Combine(
-                    Path.GetDirectoryName(outPathBase) ?? ".",
-                    Path.GetFileNameWithoutExtension(outPathBase) + $"_stereo16_off{pad}.wav"
-                );
-                WriteRiffWav(path, ch, sr, bps, pcm);
-                txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] Wrote {path} (start={start}, data={dataLen})\r\n");
-            }
-        }
-
-
-
-        // Drag & drop on input box
+        // Drag & drop
         private void txtInput_DragEnter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
