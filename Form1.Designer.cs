@@ -38,18 +38,18 @@
             this.txtInput.AllowDrop = true;
             this.txtInput.Location = new System.Drawing.Point(16, 20);
             this.txtInput.Name = "txtInput";
-            this.txtInput.Size = new System.Drawing.Size(480, 22);
+            this.txtInput.Size = new System.Drawing.Size(483, 22);
             this.txtInput.TabIndex = 0;
             this.txtInput.DragDrop += new System.Windows.Forms.DragEventHandler(this.txtInput_DragDrop);
             this.txtInput.DragEnter += new System.Windows.Forms.DragEventHandler(this.txtInput_DragEnter);
             // 
             // btnBrowseIn
             // 
-            this.btnBrowseIn.Location = new System.Drawing.Point(504, 19);
+            this.btnBrowseIn.Location = new System.Drawing.Point(505, 19);
             this.btnBrowseIn.Name = "btnBrowseIn";
-            this.btnBrowseIn.Size = new System.Drawing.Size(75, 25);
+            this.btnBrowseIn.Size = new System.Drawing.Size(151, 25);
             this.btnBrowseIn.TabIndex = 1;
-            this.btnBrowseIn.Text = "Browse…";
+            this.btnBrowseIn.Text = "Select Project…";
             this.btnBrowseIn.UseVisualStyleBackColor = true;
             this.btnBrowseIn.Click += new System.EventHandler(this.btnBrowseIn_Click);
             // 
@@ -57,16 +57,16 @@
             // 
             this.txtOutput.Location = new System.Drawing.Point(16, 60);
             this.txtOutput.Name = "txtOutput";
-            this.txtOutput.Size = new System.Drawing.Size(480, 22);
+            this.txtOutput.Size = new System.Drawing.Size(483, 22);
             this.txtOutput.TabIndex = 2;
             // 
             // btnBrowseOut
             // 
-            this.btnBrowseOut.Location = new System.Drawing.Point(504, 59);
+            this.btnBrowseOut.Location = new System.Drawing.Point(505, 60);
             this.btnBrowseOut.Name = "btnBrowseOut";
-            this.btnBrowseOut.Size = new System.Drawing.Size(75, 25);
+            this.btnBrowseOut.Size = new System.Drawing.Size(151, 25);
             this.btnBrowseOut.TabIndex = 3;
-            this.btnBrowseOut.Text = "Save As…";
+            this.btnBrowseOut.Text = "New Destination…";
             this.btnBrowseOut.UseVisualStyleBackColor = true;
             this.btnBrowseOut.Click += new System.EventHandler(this.btnBrowseOut_Click);
             // 
@@ -87,7 +87,7 @@
             this.txtLog.Name = "txtLog";
             this.txtLog.ReadOnly = true;
             this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtLog.Size = new System.Drawing.Size(563, 124);
+            this.txtLog.Size = new System.Drawing.Size(640, 124);
             this.txtLog.TabIndex = 5;
             // 
             // lblStatus
@@ -95,7 +95,7 @@
             this.lblStatus.AutoEllipsis = true;
             this.lblStatus.Location = new System.Drawing.Point(120, 105);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(459, 20);
+            this.lblStatus.Size = new System.Drawing.Size(536, 24);
             this.lblStatus.TabIndex = 6;
             this.lblStatus.Text = "Idle";
             // 
@@ -104,7 +104,7 @@
             this.AcceptButton = this.btnExtract;
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(595, 285);
+            this.ClientSize = new System.Drawing.Size(668, 285);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.txtLog);
             this.Controls.Add(this.btnExtract);
