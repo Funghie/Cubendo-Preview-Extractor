@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace CprWavExtractor
@@ -9,13 +10,13 @@ namespace CprWavExtractor
     {
         // Fixed params
         private const int CH = 2, SR = 48000, BPS = 16, SEC = 5;
-        private const int FRAME_BYTES = CH * (BPS / 8);          // 4
-        private const int DATA_LEN = SR * SEC * FRAME_BYTES;     // 960,000
+        private const int FRAME_BYTES = CH * (BPS / 8);
+        private const int DATA_LEN = SR * SEC * FRAME_BYTES;
 
         public Form1()
         {
             InitializeComponent();
-            openFileDialog1.Filter = "Cubase Project (*.cpr)|*.cpr|All files|*.*";
+            openFileDialog1.Filter = "Cubase/Nuendo Projects (*.cpr;*.npr)|*.cpr;*.npr|All files|*.*";
             saveFileDialog1.Filter = "WAV audio (*.wav)|*.wav|All files|*.*";
         }
 
@@ -44,7 +45,8 @@ namespace CprWavExtractor
                 if (!File.Exists(inPath)) throw new FileNotFoundException("Input not found.", inPath);
                 if (string.IsNullOrWhiteSpace(outPath)) throw new InvalidOperationException("Output path missing.");
 
-                ExtractWithAutoOffset(inPath, outPath);
+                int pad = ExtractWithAutoOffset(inPath, outPath);
+                txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] pad={pad}, wrote {Path.ChangeExtension(outPath, ".wav")}\r\n");
                 lblStatus.Text = "Done";
             }
             catch (Exception ex)
@@ -53,6 +55,8 @@ namespace CprWavExtractor
                 lblStatus.Text = "Error";
             }
         }
+
+
 
         private void SuggestOutputPath()
         {
@@ -64,22 +68,25 @@ namespace CprWavExtractor
         }
 
         // --- Core ---
-        private void ExtractWithAutoOffset(string inPath, string outPath)
+        // Make sure these are class-level consts
+        
+
+        public static int ExtractWithAutoOffset(string inPath, string outPath)
         {
             byte[] blob = File.ReadAllBytes(inPath);
             if (blob.LongLength < DATA_LEN) throw new InvalidOperationException("File too small.");
 
-            int pad = FindBestOffset(blob, DATA_LEN, 4096); // scan last 4 KB, 4-byte steps
+            int pad = FindBestOffset(blob, DATA_LEN, 4096);   // static helper
             long start = blob.LongLength - DATA_LEN - pad;
 
             var pcmLE = new byte[DATA_LEN];
-            Buffer.BlockCopy(blob, (int)start, pcmLE, 0, DATA_LEN); // bytes already LE per your findings
+            Buffer.BlockCopy(blob, (int)start, pcmLE, 0, DATA_LEN);
 
             string outFile = Path.ChangeExtension(outPath, ".wav");
-            WriteRiffWav(outFile, CH, SR, BPS, pcmLE);
-
-            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] pad={pad}, start={start}, wrote {outFile} (data={DATA_LEN})\r\n");
+            WriteRiffWav(outFile, CH, SR, BPS, pcmLE);        // static helper
+            return pad;
         }
+
 
         // Score a PCM window: prefer non-silent, low DC, decent RMS
         private static double ScoreWindow(byte[] buf, int start, int len)
@@ -121,6 +128,11 @@ namespace CprWavExtractor
                 if (sc > best) { best = sc; bestPad = pad; }
             }
             return bestPad;
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
 
         private static void WriteRiffWav(string path, int channels, int sampleRate, int bitsPerSample, byte[] data)

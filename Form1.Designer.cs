@@ -21,6 +21,7 @@
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.txtInput = new System.Windows.Forms.TextBox();
             this.btnBrowseIn = new System.Windows.Forms.Button();
             this.txtOutput = new System.Windows.Forms.TextBox();
@@ -37,10 +38,10 @@
             this.txtInput.AllowDrop = true;
             this.txtInput.Location = new System.Drawing.Point(16, 20);
             this.txtInput.Name = "txtInput";
-            this.txtInput.Size = new System.Drawing.Size(480, 23);
+            this.txtInput.Size = new System.Drawing.Size(480, 22);
             this.txtInput.TabIndex = 0;
-            this.txtInput.DragEnter += new System.Windows.Forms.DragEventHandler(this.txtInput_DragEnter);
             this.txtInput.DragDrop += new System.Windows.Forms.DragEventHandler(this.txtInput_DragDrop);
+            this.txtInput.DragEnter += new System.Windows.Forms.DragEventHandler(this.txtInput_DragEnter);
             // 
             // btnBrowseIn
             // 
@@ -56,7 +57,7 @@
             // 
             this.txtOutput.Location = new System.Drawing.Point(16, 60);
             this.txtOutput.Name = "txtOutput";
-            this.txtOutput.Size = new System.Drawing.Size(480, 23);
+            this.txtOutput.Size = new System.Drawing.Size(480, 22);
             this.txtOutput.TabIndex = 2;
             // 
             // btnBrowseOut
@@ -86,7 +87,7 @@
             this.txtLog.Name = "txtLog";
             this.txtLog.ReadOnly = true;
             this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtLog.Size = new System.Drawing.Size(563, 230);
+            this.txtLog.Size = new System.Drawing.Size(563, 124);
             this.txtLog.TabIndex = 5;
             // 
             // lblStatus
@@ -101,8 +102,9 @@
             // Form1
             // 
             this.AcceptButton = this.btnExtract;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(595, 390);
+            this.ClientSize = new System.Drawing.Size(595, 285);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.txtLog);
             this.Controls.Add(this.btnExtract);
@@ -110,12 +112,14 @@
             this.Controls.Add(this.txtOutput);
             this.Controls.Add(this.btnBrowseIn);
             this.Controls.Add(this.txtInput);
-            this.MinimumSize = new System.Drawing.Size(611, 429);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "CPR → WAV Extractor";
+            this.Text = "Cubase Nuendo Preview Extractor";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
     }
 }
