@@ -180,5 +180,21 @@ namespace CprWavExtractor
             }
             catch { }
         }
+
+        private static void SwapEndianPerSampleInPlace(byte[] buf, int sampleBytes)
+        {
+            for (int i = 0; i + sampleBytes <= buf.Length; i += sampleBytes)
+            {
+                int l = i;
+                int r = i + sampleBytes - 1;
+                while (l < r)
+                {
+                    byte tmp = buf[l];
+                    buf[l] = buf[r];
+                    buf[r] = tmp;
+                    l++; r--;
+                }
+            }
+        }
     }
 }
