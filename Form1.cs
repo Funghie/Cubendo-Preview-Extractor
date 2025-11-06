@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using System.Drawing;
 using System.Windows.Forms;
 
 namespace CprWavExtractor
@@ -40,8 +39,8 @@ namespace CprWavExtractor
             lblStatus.Text = "Working";
             try
             {
-                var inPath = txtInput.Text.Trim();
-                var outPath = txtOutput.Text.Trim();
+                string inPath = txtInput.Text.Trim();
+                string outPath = txtOutput.Text.Trim();
                 if (!File.Exists(inPath)) throw new FileNotFoundException("Input not found.", inPath);
                 if (string.IsNullOrWhiteSpace(outPath)) throw new InvalidOperationException("Output path missing.");
 
@@ -61,15 +60,15 @@ namespace CprWavExtractor
         private void SuggestOutputPath()
         {
             if (string.IsNullOrWhiteSpace(txtInput.Text)) return;
-            var inPath = txtInput.Text.Trim();
-            var baseName = Path.GetFileNameWithoutExtension(inPath);
-            var dir = Path.GetDirectoryName(inPath) ?? ".";
+            string inPath = txtInput.Text.Trim();
+            string baseName = Path.GetFileNameWithoutExtension(inPath);
+            string dir = Path.GetDirectoryName(inPath) ?? ".";
             txtOutput.Text = Path.Combine(dir, baseName + "_preview.wav");
         }
 
         // --- Core ---
         // Make sure these are class-level consts
-        
+
 
         public static int ExtractWithAutoOffset(string inPath, string outPath)
         {
@@ -79,7 +78,7 @@ namespace CprWavExtractor
             int pad = FindBestOffset(blob, DATA_LEN, 4096);   // static helper
             long start = blob.LongLength - DATA_LEN - pad;
 
-            var pcmLE = new byte[DATA_LEN];
+            byte[] pcmLE = new byte[DATA_LEN];
             Buffer.BlockCopy(blob, (int)start, pcmLE, 0, DATA_LEN);
 
             string outFile = Path.ChangeExtension(outPath, ".wav");
@@ -171,7 +170,7 @@ namespace CprWavExtractor
         {
             try
             {
-                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
                 if (files != null && files.Length > 0)
                 {
                     txtInput.Text = files[0];
